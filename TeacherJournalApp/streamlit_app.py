@@ -13,7 +13,7 @@ st.title("🎧 我可爱的兔子老师课堂随笔")
 
 st.markdown("请上传课堂录音文件（推荐 .wav 或 .mp3 格式）其他格式不支持哟，我会自动识别内容并生成兔子老师风格的课堂随笔。")
 
-audio_file = st.file_uploader("上传课堂录音文件", type=["wav", "mp3"])
+audio_file = st.file_uploader("上传课堂录音文件", type=["wav", "mp3", "m4a"])
 
 if audio_file is not None:
     st.success("✅ 音频文件上传成功，正在识别文字...请兔子老师耐心等待哟，这个时候别退出浏览器哈")
