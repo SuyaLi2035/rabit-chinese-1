@@ -1,39 +1,36 @@
 import streamlit as st
+import datetime
+import requests
 from openai import OpenAI
-import os
 
-# 👉 请把下面 Key 换成最终可用的 Key
+# ✅ 转发地址和 API Key（用你自己的即可）
 client = OpenAI(
     base_url="https://tbnx.plus7.plus/v1",
     api_key="sk-nrhsBkVQttpJifie93GlhrmkdTTyi7zBE6a0UqeCs6TaxAYZ"
 )
 
-st.set_page_config(page_title="兔子老师课堂随笔生成器", page_icon="🐇")
-st.title("🐇 我的可爱的兔子老师课堂随笔")
+st.title("🎧 我可爱的兔子老师课堂随笔")
 
-st.markdown("**上传 .txt 文件或直接粘贴课堂文字，然后点击生成随笔**")
+st.markdown("请上传课堂录音文件（推荐 .wav 或 .mp3 格式）其他格式不支持哟，我会自动识别内容并生成兔子老师风格的课堂随笔。")
 
-uploaded_txt = st.file_uploader("上传课堂文字文件 (.txt)", type=["txt"])
-text_input = st.text_area("或粘贴课堂文字👇", height=200)
+audio_file = st.file_uploader("上传课堂录音文件", type=["wav", "mp3"])
 
-# 固定模型为 gpt-4o，不提供选择
-model_name = "gpt-4o"
-st.markdown("🌟 当前使用模型：**gpt-4o**")
+if audio_file is not None:
+    st.success("✅ 音频文件上传成功，正在识别文字...请兔子老师耐心等待哟，这个时候别退出浏览器哈")
 
+    # Step 1: 调用你自己的 ASR 接口
+    try:
+        files = {'file': (audio_file.name, audio_file, audio_file.type)}
+        response = requests.post("http://44.243.76.30:7777/upload_asr", files=files)
+        response.raise_for_status()
+        text = response.json()["text"]
 
-if st.button("生成随笔"):
-    # ① 获取内容
-    content = ""
-    if uploaded_txt is not None:
-        content = uploaded_txt.read().decode("utf-8", errors="ignore")
-    if not content:
-        content = text_input.strip()
-    if not content:
-        st.error("请上传 txt 文件或粘贴文字！")
-        st.stop()
+        st.subheader("📄 识别出的文字内容：")
+        st.write(text)
 
-    # ② 组织提示词
-    prompt = f"""这是我的案例课堂随笔：
+        # Step 2: 使用 GPT 生成随笔
+        prompt = f"""
+这是我的案例课堂随笔：
         年的余味还在心头，孩子们带着满满的能量和全新的目标走进教室。让我们用饱满的热情拥抱新的阅读旅程。
        孩子们在教室里来回踱步，眉飞色舞的讲诉起自己寒假所发生的事情～～
         杨一：“我过年的时候在家做作业，还出去吃大餐🍛。”
@@ -94,30 +91,23 @@ if st.button("生成随笔"):
 
 保持亲切、童趣和教育引导的氛围；
 
-最后落款格式：东涂大C / 兔子老师 / [当天日期]。。
+最后落款格式：东涂大C / 兔子老师 /  {datetime.date.today()}”的署名。
 
-课堂内容：
-{content}
+课堂内容如下：
+{text}
 """
 
-    # ③ 调用接口
-    with st.spinner("✏️ 正在生成随笔..."):
-        try:
-            resp = client.chat.completions.create(
-                model=model_name,
-                messages=[
-                    {"role": "system", "content": "你是一位小学语文老师，擅长撰写有温度的课堂随笔"},
-                    {"role": "user", "content": prompt}
-                ],
-                timeout=60   # ← 新版 SDK 正确写法
-            )
-            essay = resp.choices[0].message.content.strip()
-            st.success("🎉 随笔生成成功")
-            st.markdown(essay)
-            st.download_button(
-                "📥 下载随笔",
-                essay.encode("utf-8"),
-                file_name="课堂随笔.txt"
-            )
-        except Exception as e:
-            st.error(f"生成失败：{e}")
+        st.info("📚 正在生成兔子老师风格的随笔，宝贝请耐心等待哟...")
+
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+        )
+        result = response.choices[0].message.content
+
+        st.subheader("🎉 自动生成的可爱兔兔的课堂随笔：")
+        st.write(result)
+
+    except Exception as e:
+        st.error(f"❌ 识别失败：{e}")
